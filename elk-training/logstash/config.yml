@@ -1,0 +1,12 @@
+input {
+  beats {
+    port => 5044
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => ["http://ec2-13-234-117-157.ap-south-1.compute.amazonaws.com:9200"]
+    index => "%{[@metadata][beat]}-%{[@metadata][version]}"
+  }
+}
