@@ -1,3 +1,27 @@
 docker run -d --rm --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e ES_JAVA_OPTS="-Xms300m -Xmx300m" docker.elastic.co/elasticsearch/elasticsearch:7.7.0
 docker run -d --rm --name kibana --publish 5601:5601 --env "ELASTICSEARCH_HOSTS=http://ec2-13-234-117-157.ap-south-1.compute.amazonaws.com:9200" docker.elastic.co/kibana/kibana:7.7.0
 docker run -d --rm --name logstash -p 5044:5044 -p 9600:9600 -e LS_JAVA_OPTS="-Xms400m -Xmx400m" -v ~/pipeline/:/usr/share/logstash/pipeline/ docker.elastic.co/logstash/logstash:7.7.0
+
+docker run -d --rm --name=filebeat --user=root \
+  --volume="$(pwd)/filebeat.docker.yml:/usr/share/filebeat/filebeat.yml:ro" \
+  --volume="/var/lib/docker/containers:/var/lib/docker/containers:ro" \
+  --volume="/var/run/docker.sock:/var/run/docker.sock:ro" \
+  docker.elastic.co/beats/filebeat:7.7.1
+
+
+docker run -d --rm --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e ES_JAVA_OPTS="-Xms400m -Xmx400m" \
+ --volume="$(pwd)/elasticsearch/data:/usr/share/elasticsearch/data:rw" \
+ docker.elastic.co/elasticsearch/elasticsearch:7.7.0
+
+
+docker run -d \
+  --name=metricbeat \
+  --user=root \
+  --volume="$(pwd)/metricbeat.docker.yml:/usr/share/metricbeat/metricbeat.yml:ro" \
+  --volume="/var/run/docker.sock:/var/run/docker.sock:ro" \
+  --volume="/sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro" \
+  --volume="/proc:/hostfs/proc:ro" \
+  --volume="/:/hostfs:ro" \
+  docker.elastic.co/beats/metricbeat:7.7.1 metricbeat -e \
+  -E output.elasticsearch.hosts=["http://ec2-13-234-117-157.ap-south-1.compute.amazonaws.com:9200"] -e \
+  -E setup.kibana.host="http://ec2-13-126-253-212.ap-south-1.compute.amazonaws.com:5601"
