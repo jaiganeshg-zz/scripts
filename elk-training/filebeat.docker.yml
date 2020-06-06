@@ -1,0 +1,29 @@
+filebeat.inputs:
+- type: docker
+  combine_partial: true
+  containers:
+    path: "/var/lib/docker/containers"
+    stream: "stdout"
+    ids:
+      - "*"
+
+
+#============================= Filebeat modules ===============================
+
+filebeat.config:
+  modules:
+    path: ${path.config}/modules.d/*.yml
+    reload.enabled: false
+
+#============================== Kibana =====================================
+
+# Starting with Beats version 6.0.0, the dashboards are loaded via the Kibana API.
+# This requires a Kibana endpoint configuration.
+setup.kibana:
+  host: "http://ec2-13-126-253-212.ap-south-1.compute.amazonaws.com:5601"
+
+
+
+#----------------------------- Logstash output --------------------------------
+output.logstash:
+  hosts: ["ec2-13-127-231-107.ap-south-1.compute.amazonaws.com:5044"]
