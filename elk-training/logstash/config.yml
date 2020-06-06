@@ -2,6 +2,10 @@ input {
   beats {
     port => 5044
   }
+  kafka {
+            bootstrap_servers => "localhost:9092"
+            topics => "kafkatest2"
+    }
 }
 
 output {
