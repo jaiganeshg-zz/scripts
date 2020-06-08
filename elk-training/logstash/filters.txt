@@ -1,0 +1,78 @@
+Run as translator
+docker run -it --rm -e 'input { stdin { } } output { stdout { } }' -e LS_JAVA_OPTS="-Xms400m -Xmx400m"  docker.elastic.co/logstash/logstash:7.7.1
+
+
+
+Create log file
+mkdir pipeline
+vi config.yaml
+input {
+   file {
+      path => "/logs/input.log"
+      start_position => "beginning"
+      sincedb_path => "/dev/null"
+   }
+}
+output {
+   file {
+           path => "/logs/output.log"
+   }
+}
+
+mkdir logs
+touch logs/input.log
+touch logs/output.log
+docker run -d --rm --name logstash -p 5044:5044 -p 9600:9600 -e LS_JAVA_OPTS="-Xms400m -Xmx400m" -v $(pwd)/pipeline/:/usr/share/logstash/pipeline/ -v "$(pwd)/logs":/logs docker.elastic.co/logstash/logstash:7.7.1
+
+tail -f logs/output.log
+echo "test message" > logs/output.log
+
+
+https://github.com/elastic/logstash/blob/v1.4.2/patterns/grok-patterns
+https://grokdebug.herokuapp.com/
+
+
+
+grok {
+      match => ["message", "\[%{TIMESTAMP_ISO8601:timestamp}\]\[%{DATA:loglevel}%{SPACE}\]\[%{DATA:source}%{SPACE}\]%{SPACE}\[%{DATA:node}\]%{SPACE}\[%{DATA:index}\] %{NOTSPACE} \[%{DATA:updated-type}\]",
+                "message", "\[%{TIMESTAMP_ISO8601:timestamp}\]\[%{DATA:loglevel}%{SPACE}\]\[%{DATA:source}%{SPACE}\]%{SPACE}\[%{DATA:node}\] (\[%{NOTSPACE:Index}\]\[%{NUMBER:shards}\])?%{GREEDYDATA}"
+      ]
+   }
+
+
+
+input {
+   file {
+      path => "/logs/input.log"
+           start_position => "beginning"
+    sincedb_path => "/dev/null"
+   }
+}
+filter {
+        grok {
+   match => { "message" => "%{TIMESTAMP_ISO8601:timestamp} %{LOGLEVEL:log-level} \[%{DATA:class}\]:%{GREEDYDATA:message}" }
+   add_tag =>  [ "My_Secret_Tag" ]
+   #overwrite => ["message"]
+ }
+ mutate {
+   lowercase => [ "log-level" ]
+  }
+}
+output {
+   file {
+           path => "/logs/output.log"
+   }
+}
+
+
+grok {
+      match => { "message" => "%{NGINXACCESS}" }
+    }
+    geoip {
+      source => "clientip"
+    }
+
+
+Filters
+Grok
+geoip
