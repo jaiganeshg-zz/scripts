@@ -1,0 +1,73 @@
+Machine1 - Zookeeper
+
+docker run -d --rm --name zookeeper-server \
+    -e ALLOW_ANONYMOUS_LOGIN=yes \
+    -p 2181:2181 \
+    bitnami/zookeeper:latest
+
+
+Machine2 - Kafka
+
+Notes:
+KAFKA_CFG_ZOOKEEPER_CONNECT - Should put zookeeper machine DNS
+KAFKA_CFG_ADVERTISED_LISTENERS-External - Should point to current machine(Kafka machine) DNS
+
+docker run -d --rm --name kafka-server \
+    --network app-tier \
+    -e ALLOW_PLAINTEXT_LISTENER=yes \
+    -e KAFKA_CFG_LISTENERS=CLIENT://:9092,EXTERNAL://:9093 \
+    -e KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT \
+    -e KAFKA_CFG_ADVERTISED_LISTENERS=CLIENT://localhost:9092,EXTERNAL://ec2-13-233-137-182.ap-south-1.compute.amazonaws.com:9093 \
+    -e KAFKA_CFG_ZOOKEEPER_CONNECT=ec2-13-232-249-106.ap-south-1.compute.amazonaws.com:2181 \
+    -e KAFKA_INTER_BROKER_LISTENER_NAME=CLIENT \
+    -e KAFKA_HEAP_OPTS="-Xms300m -Xmx300m" \
+    -p 9092:9092 \
+    -p 9093:9093 \
+    bitnami/kafka:latest
+
+
+Machine3- Logstash
+
+Notes:
+bootstrap_servers - Should put kafka machine DNS
+create two directories - pipeline,logs
+vi pipeline/config.yaml
+input {
+   file {
+      path => "/logs/input.log"
+           start_position => "beginning"
+    sincedb_path => "/dev/null"
+   }
+   kafka
+    {
+            bootstrap_servers => "ec2-13-233-137-182.ap-south-1.compute.amazonaws.com:9093"
+            topics => "mytopic"
+    }
+}
+output {
+   file {
+           path => "/logs/output.log"
+   }
+}
+
+
+
+
+docker run --rm --name logstash \
+    -p 5044:5044 \
+    -p 9600:9600 \
+    -e LS_JAVA_OPTS="-Xms400m -Xmx400m" \
+    -e MONITORING_ENABLED=false \
+    -v $(pwd)/pipeline/:/usr/share/logstash/pipeline/ \
+    -v "$(pwd)/logs":/logs \
+    docker.elastic.co/logstash/logstash:7.7.1
+
+
+To Test
+Login into Kafka machine and run below things
+docker exec kafka-server kafka-topics.sh --list  --zookeeper zookeeper-server:2181
+docker exec kafka-server kafka-topics.sh --create --zookeeper zookeeper-server:2181 --topic mytopic --partitions 1 --replication-factor 1
+docker exec kafka-server kafka-topics.sh --describe --zookeeper zookeeper-server:2181 --topic mytopic
+docker exec -it kafka-server kafka-console-producer.sh --broker-list localhost:9092 --topic mytopic
+//Send some messages
+Open logstash machine and do 'tail -f logs/output.log' to view the messages
