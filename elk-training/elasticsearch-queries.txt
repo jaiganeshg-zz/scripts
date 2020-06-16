@@ -1,0 +1,151 @@
+GET /
+
+PUT /megacorp_employee/_doc/1
+{
+    "first_name" : "John",
+    "last_name" :  "Smith",
+    "age" :        25,
+    "about" :      "I love to go rock climbing",
+    "interests": [ "sports", "music" ]
+}
+
+POST /megacorp_employee/_doc/2
+{
+    "first_name" :  "Jane",
+    "last_name" :   "Smith",
+    "age" :         32,
+    "about" :       "I like to collect rock albums",
+    "interests":  [ "music" ]
+}
+
+PUT /megacorp_employee/_doc/3
+{
+    "first_name" :  "Douglas",
+    "last_name" :   "Fir",
+    "age" :         35,
+    "about":        "I like to build cabinets",
+    "interests":  [ "forestry" ]
+}
+
+GET _sql?format=txt
+{
+  "query": "select first_name,last_name,age,about from megacorp_employee"
+}
+
+GET /megacorp_employee/
+
+GET /megacorp_employee/_doc/1
+
+GET /megacorp_employee/_search
+
+GET /megacorp_employee/_search?q=last_name:Smith
+
+GET /megacorp_employee/_search
+{
+    "query" : {
+        "match" : {
+            "last_name" : "Smith"
+        }
+    }
+}
+
+GET /megacorp_employee/_search
+{
+    "query" : {
+        "match" : {
+            "about" : "rock climbing"
+        }
+    }
+}
+
+GET /megacorp_employee/_search
+{
+    "query" : {
+        "match_phrase" : {
+            "about" : "rock climbing"
+        }
+    }
+}
+
+GET /megacorp_employee/_search
+{
+    "query" : {
+        "match_phrase" : {
+            "about" : "rock climbing"
+        }
+    },
+    "highlight": {
+        "fields" : {
+            "about" : {}
+        }
+    }
+}
+
+
+GET /megacorp_employee/_search
+{
+  "aggs": {
+    "all_interests": {
+      "terms": { "field": "interests.keyword" }
+    }
+  }
+}
+
+
+GET /megacorp_employee/_search
+{
+  "query": {
+    "match": {
+      "last_name": "smith"
+    }
+  },
+  "aggs": {
+    "all_interests": {
+      "terms": {
+        "field": "interests.keyword"
+      }
+    }
+  }
+}
+
+
+GET /megacorp_employee/_search
+{
+  "aggs": {
+    "all_interests": {
+      "terms": {
+        "field": "interests.keyword"
+      },
+      "aggs": {
+        "avg_age": {
+          "avg": {
+            "field": "age"
+          }
+        }
+      }
+    }
+  }
+}
+
+GET /_search?q=2014
+GET /_search?q=date:2014
+GET /tweet/_search?q=date:2014-09-15
+
+
+POST /_analyze?pretty
+{
+  "analyzer": "standard",
+  "text": "The 2 QUICK Brown-Foxes jumped over the lazy dog\u0027s bone."
+}
+
+POST /_analyze?pretty
+{
+  "analyzer": "simple",
+  "text": "The 2 QUICK Brown-Foxes jumped over the lazy dog\u0027s bone."
+}
+
+POST /_analyze?pretty
+{
+  "analyzer": "whitespace",
+  "text": "The 2 QUICK Brown-Foxes jumped over the lazy dog\u0027s bone."
+}
