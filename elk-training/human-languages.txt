@@ -1,0 +1,278 @@
+quick brown fox - fast brown foxes
+Johnny Walker-Johnnie Walker
+Arnolt Schwarzenneger-Arnold Schwarzenegger
+
+Remove diacritics like ´, ^, and ¨ so that a search for rôle will also match role, and vice vers
+
+Remove the distinction between singular and plural—fox versus foxes—or between tenses—jumping versus jumped versus jumps—by stemming each word to its root form
+
+Remove commonly used words or stopwords like the, and, and or to improve search performance
+
+Including synonyms so that a query for quick could also match fast, or UK could match United Kingdom
+
+Check for misspellings or alternate spellings, or match on homophones—words that sound the same, like their versus there, meat versus meet versus mete
+
+Elasticsearch ships with a collection of language analyzers that provide good, basic, out-of-the-box support for many of the world’s most common languages:
+
+Arabic, Armenian, Basque, Brazilian, Bulgarian, Catalan, Chinese, Czech, Danish, Dutch, English, Finnish, French, Galician, German, Greek, Hindi, Hungarian, Indonesian, Irish, Italian, Japanese, Korean, Kurdish, Norwegian, Persian, Portuguese, Romanian, Russian, Spanish, Swedish, Turkish, and Thai.
+
+These analyzers typically perform four roles:
+
+Tokenize text into individual words:
+
+The quick brown foxes → [The, quick, brown, foxes]
+
+Lowercase tokens:
+
+The → the
+
+Remove common stopwords:
+
+[The, quick, brown, foxes] → [quick, brown, foxes]
+
+Stem tokens to their root form:
+
+foxes → fox
+
+Each analyzer may also apply other transformations specific to its language in order to make words from that language more searchable:
+
+The english analyzer removes the possessive 's:
+
+John's → john
+
+The french analyzer removes elisions like l' and qu' and diacritics like ¨ or ^:
+
+l'église → eglis
+
+The german analyzer normalizes terms, replacing ä and ae with a, or ß with ss, among others:
+
+äußerst → ausserst
+
+Using Language Analyzers
+The built-in language analyzers are available globally and don’t need to be configured before being used. They can be specified directly in the field mapping:
+PUT /my_index
+{
+  "mappings": {
+    "blog": {
+      "properties": {
+        "title": {
+          "type":     "string",
+          "analyzer": "english" 1
+        }
+      }
+    }
+  }
+}
+
+
+
+POST /_analyze?pretty
+{
+  "analyzer": "english",
+  "text": "I'm not happy about the foxes"
+}
+
+PUT /my_index
+{
+  "mappings": {
+    "blog": {
+      "properties": {
+        "title": { 1
+          "type": "string",
+          "fields": {
+            "english": { 2
+              "type":     "string",
+              "analyzer": "english"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+PUT /my_index
+{
+  "mappings": {
+    "blog": {
+      "properties": {
+        "title": { 1
+          "type": "string",
+          "fields": {
+            "english": { 2
+              "type":     "string",
+              "analyzer": "english"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+The default list of stopwords used in English are as follows:
+
+a, an, and, are, as, at, be, but, by, for, if, in, into, is, it,
+no, not, of, on, or, such, that, the, their, then, there, these,
+they, this, to, was, will, with
+
+
+PUT /my_index
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "my_english": {
+          "type": "english",
+          "stem_exclusion": [ "organization", "organizations" ], 1
+          "stopwords": [ 2
+            "a", "an", "and", "are", "as", "at", "be", "but", "by", "for",
+            "if", "in", "into", "is", "it", "of", "on", "or", "such", "that",
+            "the", "their", "then", "there", "these", "they", "this", "to",
+            "was", "will", "with"
+          ]
+        }
+      }
+    }
+  }
+}
+
+
+Mixing Languages
+
+At Index Time
+Multilingual documents come in three main varieties:
+
+One predominant language per document, which may contain snippets from other languages 
+
+One predominant language per field, which may contain snippets from other languages 
+
+A mixture of languages per field
+
+
+One Language per Document
+
+PUT /blogs-en
+{
+  "mappings": {
+    "post": {
+      "properties": {
+        "title": {
+          "type": "string", 1
+          "fields": {
+            "stemmed": {
+              "type":     "string",
+              "analyzer": "english" 2
+            }
+}}}}}}
+
+PUT /blogs-fr
+{
+  "mappings": {
+    "post": {
+      "properties": {
+        "title": {
+          "type": "string", 1
+          "fields": {
+            "stemmed": {
+              "type":     "string",
+              "analyzer": "french" 2
+            }
+}}}}}}
+
+
+One Language per Field
+For documents that represent entities like products, movies, or legal notices, it is common for the same text to be translated into several languages. Although each translation could be represented in a single document in an index per language, another reasonable approach is to keep all translations in the same document:
+
+{
+   "title":     "Fight club",
+   "title_br":  "Clube de Luta",
+   "title_cz":  "Klub rvácu",
+   "title_en":  "Fight club",
+   "title_es":  "El club de la lucha",
+   ...
+}
+Each translation is stored in a separate field, which is analyzed according to the language it contains:
+
+PUT /movies
+{
+  "mappings": {
+    "movie": {
+      "properties": {
+        "title": { 1
+          "type":       "string"
+        },
+        "title_br": { 2
+            "type":     "string",
+            "analyzer": "brazilian"
+        },
+        "title_cz": { 2
+            "type":     "string",
+            "analyzer": "czech"
+        },
+        "title_en": { 2
+            "type":     "string",
+            "analyzer": "english"
+        },
+        "title_es": { 2
+            "type":     "string",
+            "analyzer": "spanish"
+        }
+      }
+    }
+  }
+}
+
+Mixed-Language Fields
+Usually, documents that mix multiple languages in a single field come from sources beyond your control, such as pages scraped from the Web:
+
+{ "body": "Page not found / Seite nicht gefunden / Page non trouvée" }
+They are the most difficult type of multilingual document to handle correctly. Although you can simply use the standard analyzer on all fields, your documents will be less searchable than if you had used an appropriate stemmer. But of course, you can’t choose just one stemmer—stemmers are language specific. Or rather, stemmers are language and script specific. As discussed in “Stemmer per Script”, if every language uses a different script, then stemmers can be combined.
+
+Assuming that your mix of languages uses the same script such as Latin, you have three choices available to you:
+
+Split into separate fields
+
+Analyze multiple times
+
+Use n-grams
+
+PUT /movies
+{
+  "settings": {
+    "analysis": {...} 1
+  },
+  "mappings": {
+    "title": {
+      "properties": {
+        "title": {
+          "type": "string",
+          "fields": {
+            "de": {
+              "type":     "string",
+              "analyzer": "german"
+            },
+            "en": {
+              "type":     "string",
+              "analyzer": "english"
+            },
+            "fr": {
+              "type":     "string",
+              "analyzer": "french"
+            },
+            "es": {
+              "type":     "string",
+              "analyzer": "spanish"
+            },
+            "general": { 2
+              "type":     "string",
+              "analyzer": "trigrams"
+            }
+          }
+        }
+      }
+    }
+  }
+}
