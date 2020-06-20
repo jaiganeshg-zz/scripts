@@ -296,3 +296,36 @@ GET /gb/tweet/_validate/query?explain
    }
 }
 ```
+
+
+### Combiled Query
+```
+GET /tweet/_search
+{
+    "query" : {
+        "bool": {
+          "must": [
+            {
+              "match": {
+                "tweet": "Elasticsearch"
+              }
+            }
+          ],
+          "filter": [
+            {
+              "term": {
+                "user_id": 2
+              }
+            }
+          ], 
+          "should": [
+            {
+              "match": {
+                "tweet": "text"
+              }
+            }
+          ]
+        }
+    }
+}
+```
