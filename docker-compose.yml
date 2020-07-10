@@ -1,0 +1,78 @@
+version: '2.2'
+services:
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
+    container_name: es01
+    environment:
+      - node.name=es01
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=es01
+      - cluster.initial_master_nodes=es01
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - data01:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - elastic
+
+  kib01:
+    image: docker.elastic.co/kibana/kibana:7.7.0
+    container_name: kib01
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_URL: http://es01:9200
+      ELASTICSEARCH_HOSTS: http://es01:9200
+    networks:
+      - elastic
+
+  log01:
+    image: docker.elastic.co/logstash/logstash:7.7.1
+    container_name: log01
+    ports:
+      - 5044:5044
+      - 9600:9600
+    volumes:
+      - ${PWD}/logstash/pipeline/:/usr/share/logstash/pipeline/
+    networks:
+      - elastic
+
+  apm01:
+    image: docker.elastic.co/apm/apm-server:7.8.0
+    container_name: apm01
+    ports:
+      - 8200:8200
+    command: >
+       apm-server -e
+         -E apm-server.rum.enabled=true
+         -E setup.kibana.host=kib01:5601
+         -E setup.template.settings.index.number_of_replicas=0
+         -E apm-server.kibana.enabled=true
+         -E apm-server.kibana.host=kib01:5601
+         -E output.elasticsearch.hosts=["es01:9200"]
+    networks:
+      - elastic
+
+  file01:
+    image: docker.elastic.co/beats/filebeat:7.8.0
+    container_name: file01
+    networks:
+      - elastic
+    volumes:
+      - /Users/jai/Documents/projects/verumex/log:/var/log
+      - "${PWD}/filebeat/filebeat.docker.yml:/usr/share/filebeat/filebeat.yml:ro"
+            
+
+volumes:
+  data01:
+    driver: local
+
+networks:
+  elastic:
+    driver: bridge
