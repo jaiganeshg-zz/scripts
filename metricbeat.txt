@@ -1,0 +1,8 @@
+metricbeat modules enable postgresql
+metricbeat modules enable system
+
+metricbeat setup --index-management -E output.logstash.enabled=false -E 'output.elasticsearch.hosts=["localhost:9200"]'
+
+curl -XDELETE 'http://localhost:9200/metricbeat-*'
+
+metricbeat setup --dashboards
