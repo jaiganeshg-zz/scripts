@@ -1,0 +1,6 @@
+filebeat.inputs:
+- type: log
+  paths:
+    - /Users/jai/Documents/projects/verumex/log/*.log
+output.console:
+  pretty: true

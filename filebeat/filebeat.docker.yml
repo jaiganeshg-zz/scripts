@@ -1,0 +1,14 @@
+filebeat.inputs:
+- type: docker
+  combine_partial: true
+  containers:
+    path: "/var/lib/docker/containers"
+    stream: "stdout"
+    ids:
+      - "*"
+- type: log
+  paths:
+    - "/var/log/*"
+
+output.elasticsearch:
+        hosts: 'http://es01:9200'
